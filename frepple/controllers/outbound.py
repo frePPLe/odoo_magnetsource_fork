@@ -826,6 +826,18 @@ class exporter(object):
         ):
             self.product_templates[i["id"]] = i
 
+        self.mto_templates = set()
+        self.env.cr.execute(
+            """
+            select product_id, name from stock_route_product
+            inner join stock_location_route on stock_location_route.id = stock_route_product.route_id
+            where stock_location_route.name = 'Replenish on Order (MTO)';
+            """
+        )
+        for i in self.env.cr.fetchall():
+            if i[1] == "Replenish on Order (MTO)":
+                self.mto_templates.add(i[0])
+
         # Read the products
         supplierinfo_fields = [
             "name",
@@ -901,6 +913,10 @@ class exporter(object):
                 if warehouse
                 else "",
             )
+
+            if i["product_tmpl_id"][0] in self.mto_templates:
+                yield '<stringproperty name="inventory_policy" value="Make To Order"/>'
+
             # Export suppliers for the item, if the item is allowed to be purchased
             if tmpl["purchase_ok"]:
                 try:
@@ -1065,12 +1081,18 @@ class exporter(object):
                 "sequence",
             ],
         ):
-            # Determine the location
-            location = self.mfg_location
 
             product_template = self.product_templates.get(i["product_tmpl_id"][0], None)
             if not product_template:
                 continue
+
+            # Determine the location
+            location = (
+                product_template["x_frepple_warehouse"]
+                if "x_frepple_warehouse" in product_template
+                else self.mfg_location
+            )
+
             uom_factor = self.convert_qty_uom(
                 1.0, i["product_uom_id"], i["product_tmpl_id"][0]
             )
