@@ -827,7 +827,7 @@ class exporter(object):
             self.product_templates[i["id"]] = i
 
         self.mto_templates = set()
-        self.env.cr.execute(
+        self.generator.env.cr.execute(
             """
             select product_id, name from stock_route_product
             inner join stock_location_route on stock_location_route.id = stock_route_product.route_id
