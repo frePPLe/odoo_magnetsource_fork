@@ -834,7 +834,7 @@ class exporter(object):
             where stock_location_route.name = 'Replenish on Order (MTO)';
             """
         )
-        for i in self.env.cr.fetchall():
+        for i in self.generator.env.cr.fetchall():
             if i[1] == "Replenish on Order (MTO)":
                 self.mto_templates.add(i[0])
 
