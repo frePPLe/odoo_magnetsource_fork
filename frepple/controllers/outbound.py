@@ -1088,8 +1088,10 @@ class exporter(object):
 
             # Determine the location
             location = (
-                product_template["x_frepple_warehouse"]
+                self.warehouses[product_template["x_frepple_warehouse"][0]]
                 if "x_frepple_warehouse" in product_template
+                and len(product_template["x_frepple_warehouse"]) > 0
+                and product_template["x_frepple_warehouse"][0] in self.warehouses
                 else self.mfg_location
             )
 
