@@ -48,7 +48,7 @@ class importer(object):
             self.timezone = timezone("UTC")
 
         # User to be set as responsible on new objects in incremental exports
-        self.actual_user = None  # req.httprequest.form.get("actual_user", None)
+        self.actual_user = req.httprequest.form.get("actual_user", None)
         if self.mode == 2 and self.actual_user:
             try:
                 self.actual_user = self.env["res.users"].search(
@@ -66,9 +66,7 @@ class importer(object):
             proc_orderline = self.env["purchase.order.line"].with_user(self.actual_user)
             mfg_order = self.env["mrp.production"].with_user(self.actual_user)
             mfg_workorder = self.env["mrp.workorder"].with_user(self.actual_user)
-            stck_picking_type = self.env["stock.picking.type"].with_user(
-                self.actual_user
-            )
+            stck_picking_type = self.env["stock.picking.type"]
         else:
             proc_order = self.env["purchase.order"]
             proc_orderline = self.env["purchase.order.line"]
