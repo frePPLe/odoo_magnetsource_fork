@@ -48,7 +48,7 @@ class importer(object):
             self.timezone = timezone("UTC")
 
         # User to be set as responsible on new objects in incremental exports
-        self.actual_user = req.httprequest.form.get("actual_user", None)
+        self.actual_user = None  # req.httprequest.form.get("actual_user", None)
         if self.mode == 2 and self.actual_user:
             try:
                 self.actual_user = self.env["res.users"].search(
