@@ -66,6 +66,7 @@ class importer(object):
             proc_orderline = self.env["purchase.order.line"].with_user(self.actual_user)
             mfg_order = self.env["mrp.production"].with_user(self.actual_user)
             mfg_workorder = self.env["mrp.workorder"].with_user(self.actual_user)
+            mfg_workcenter = self.env["mrp.workcenter"].with_user(self.actual_user)
             stck_picking_type = self.env["stock.picking.type"].with_user(
                 self.actual_user
             )
@@ -74,6 +75,7 @@ class importer(object):
             proc_orderline = self.env["purchase.order.line"]
             mfg_order = self.env["mrp.production"]
             mfg_workorder = self.env["mrp.workorder"]
+            mfg_workcenter = self.env["mrp.workcenter"]
             stck_picking_type = self.env["stock.picking.type"]
         if self.mode == 1:
             # Cancel previous draft purchase quotations
@@ -113,9 +115,44 @@ class importer(object):
 
         # Mapping between frepple-generated MO reference and their odoo id.
         mo_references = {}
+        wo_data = []
 
         for event, elem in iterparse(self.datafile, events=("start", "end")):
-            if event == "end" and elem.tag == "operationplan":
+            if event == "start" and elem.tag == "workorder" and elem.get("operation"):
+                try:
+                    wo = {
+                        "operation": elem.get("operation"),
+                        "id": int(elem.get("operation").rsplit("- ", 1)[-1]),
+                    }
+                    st = elem.get("start")
+                    if st:
+                        try:
+                            wo["start"] = datetime.strptime(st, "%Y-%m-%d %H:%M:%S")
+                        except Exception:
+                            pass
+                    nd = elem.get("end")
+                    if st:
+                        try:
+                            wo["end"] = datetime.strptime(nd, "%Y-%m-%d %H:%M:%S")
+                        except Exception:
+                            pass
+                    wo_data.append(wo)
+                except Exception:
+                    pass
+            elif event == "start" and elem.tag == "resource" and wo_data:
+                try:
+                    res = {
+                        "name": elem.get("name"),
+                        "id": int(elem.get("id")),
+                        "quantity": float(elem.get("quantity") or 0),
+                    }
+                    if "workcenters" in wo_data[-1]:
+                        wo_data[-1]["workcenters"].append(res)
+                    else:
+                        wo_data[-1]["workcenters"] = [res]
+                except Exception:
+                    pass
+            elif event == "end" and elem.tag == "operationplan":
                 uom_id, item_id = elem.get("item_id").split(",")
                 try:
                     ordertype = elem.get("ordertype")
@@ -315,11 +352,25 @@ class importer(object):
                         # mo.action_confirm()  # confirm MO
                         # mo._plan_workorders() # plan MO
                         # mo.action_assign() # reserve material
+
+                        # Process the workorder information we received
+                        if wo_data:
+                            for wo in mo.workorder_ids:
+                                for rec in wo_data:
+                                    if rec["id"] == wo.operation_id.id:
+                                        for res in rec["workcenters"]:
+                                            if res["id"] != wo.workcenter_id.id:
+                                                wc = mfg_workcenter.browse(res["id"])
+                                                if wo.workcenter_id == wc[0].owner:
+                                                    wo.workcenter_id = res["id"]
+                                                
+
                         countmfg += 1
                 except Exception as e:
                     logger.error("Exception %s" % e)
                     msg.append(str(e))
                 # Remove the element now to keep the DOM tree small
+                wo_data = []
                 root.clear()
             elif event == "start" and elem.tag == "operationplans":
                 # Remember the root element
