@@ -1667,9 +1667,12 @@ class exporter(object):
                     if self.respect_reservations and moves[mv_id]["state"] in (
                         "partially_available",
                         "assigned",
-                        "waiting",
                     ):
                         qty -= moves[mv_id]["reserved_availability"]
+                    if self.respect_reservations and moves[mv_id]["state"] in (
+                        "waiting",
+                    ):
+                        qty -= moves[mv_id]["forecast_availability"]
                     if moves[mv_id]["date"]:
                         due = self.formatDateTime(moves[mv_id]["date"])
                     yield (
