@@ -1667,6 +1667,7 @@ class exporter(object):
                     if self.respect_reservations and moves[mv_id]["state"] in (
                         "partially_available",
                         "assigned",
+                        "waiting",
                     ):
                         qty -= moves[mv_id]["reserved_availability"]
                     if moves[mv_id]["date"]:
