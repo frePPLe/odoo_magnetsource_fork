@@ -1573,6 +1573,7 @@ class exporter(object):
                     "quantity_done",
                     "warehouse_id",
                     "reserved_availability",
+                    "forecast_availability"
                 ],
             )
         }
@@ -1672,7 +1673,7 @@ class exporter(object):
                     if self.respect_reservations and moves[mv_id]["state"] in (
                         "waiting",
                     ):
-                        qty -= moves[mv_id]["forecast_availability"]
+                        qty -= (moves[mv_id]["forecast_availability"] or 0)
                     if moves[mv_id]["date"]:
                         due = self.formatDateTime(moves[mv_id]["date"])
                     yield (
