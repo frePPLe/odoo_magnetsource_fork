@@ -1535,7 +1535,6 @@ class exporter(object):
                 "product_uom_qty",
                 "product_uom",
                 "order_id",
-                "move_ids",
             ],
         )
 
@@ -1557,15 +1556,21 @@ class exporter(object):
         }
 
         # Get stock moves
-        move_ids = []
-        for i in so_line:
-            if i["move_ids"]:
-                move_ids.extend(i["move_ids"])
-        moves = {
-            i["id"]: i
+        moves = {}
+        if self.respect_reservations:
             for i in self.generator.getData(
                 "stock.move",
-                ids=move_ids,
+                search=[
+                    ("sale_line_id", "!=", False),
+                    (
+                        "state",
+                        "in",
+                        (
+                            "partially_available",
+                            "assigned",
+                        ),
+                    ),
+                ],
                 fields=[
                     "state",
                     "date",
@@ -1573,10 +1578,15 @@ class exporter(object):
                     "quantity_done",
                     "warehouse_id",
                     "reserved_availability",
-                    "forecast_availability"
+                    "sale_line_id",
                 ],
-            )
-        }
+            ):
+                if i["sale_line_id"][0] in moves:
+                    moves[i["sale_line_id"][0]].append(i)
+                else:
+                    moves[i["sale_line_id"][0]] = [
+                        i,
+                    ]
 
         # Generate the demand records
         yield "<!-- sales order lines -->\n"
@@ -1654,28 +1664,18 @@ class exporter(object):
                 logger.warning("Unknown sales order state: %s." % (state,))
                 continue
 
-            if status == "open" and i["move_ids"]:
+            if status == "open" and i["id"] in moves:
                 # Use the delivery order info for open orders
                 cnt = 1
-                for mv_id in i["move_ids"]:
-                    if moves[mv_id]["state"] in ("draft", "cancel", "done"):
-                        continue
+                for mv in moves[i["id"]]:
                     qty = self.convert_qty_uom(
-                        moves[mv_id]["product_uom_qty"],
+                        mv["product_uom_qty"],
                         i["product_uom"],
                         self.product_product[i["product_id"][0]]["template"],
                     )
-                    if self.respect_reservations and moves[mv_id]["state"] in (
-                        "partially_available",
-                        "assigned",
-                    ):
-                        qty -= moves[mv_id]["reserved_availability"]
-                    if self.respect_reservations and moves[mv_id]["state"] in (
-                        "waiting",
-                    ):
-                        qty -= (moves[mv_id]["forecast_availability"] or 0)
-                    if moves[mv_id]["date"]:
-                        due = self.formatDateTime(moves[mv_id]["date"])
+                    qty -= mv["reserved_availability"]
+                    if mv["date"]:
+                        due = self.formatDateTime(mv["date"])
                     yield (
                         '<demand name=%s batch=%s quantity="%s" due="%s" priority="%s" minshipment="%s" status="%s"><item name=%s/><customer name=%s/><location name=%s/>'
                         # Enable only in frepple >= 6.25
