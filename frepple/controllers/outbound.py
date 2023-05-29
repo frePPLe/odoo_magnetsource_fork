@@ -61,7 +61,6 @@ class Odoo_generator:
 
 
 class XMLRPC_generator:
-
     pagesize = 5000
 
     def __init__(self, url, db, username, password):
@@ -447,7 +446,6 @@ class exporter(object):
         cal_tz = {}
         cal_ids = set()
         try:
-
             # Read the timezone
             for i in self.generator.getData(
                 "resource.calendar",
@@ -851,6 +849,7 @@ class exporter(object):
             "batching_window",
             "sequence",
             "is_subcontractor",
+            "x_studio_order_multiple",
         ]
         first = True
         for i in self.generator.getData(
@@ -972,6 +971,14 @@ class exporter(object):
                             not r["min_qty"] or sup["min_qty"] < r["min_qty"]
                         ):
                             r["min_qty"] = sup["min_qty"]
+                        if sup["x_studio_order_multiple"] and (
+                            not r["x_studio_order_multiple"]
+                            or sup["x_studio_order_multiple"]
+                            < r["x_studio_order_multiple"]
+                        ):
+                            r["x_studio_order_multiple"] = sup[
+                                "x_studio_order_multiple"
+                            ]
                         if sup["price"] and (
                             not r["price"] or sup["price"] < r["price"]
                         ):
@@ -986,17 +993,19 @@ class exporter(object):
                             "sequence": sup["sequence"] or 1,
                             "batching_window": sup["batching_window"] or 0,
                             "min_qty": sup["min_qty"],
+                            "x_studio_order_multiple": sup["x_studio_order_multiple"],
                             "price": max(0, sup["price"]),
                             "date_end": sup["date_end"],
                         }
                 if suppliers:
                     yield "<itemsuppliers>\n"
                     for k, v in suppliers.items():
-                        yield '<itemsupplier leadtime="P%dD" priority="%s" batchwindow="P%dD" size_minimum="%f" cost="%f"%s%s><supplier name=%s/></itemsupplier>\n' % (
+                        yield '<itemsupplier leadtime="P%dD" priority="%s" batchwindow="P%dD" size_minimum="%f" size_multiple="%f" cost="%f"%s%s><supplier name=%s/></itemsupplier>\n' % (
                             v["delay"],
                             v["sequence"] or 1,
                             v["batching_window"] or 0,
                             v["min_qty"],
+                            v["x_studio_order_multiple"] or 1,
                             max(0, v["price"]),
                             ' effective_end="%sT00:00:00"'
                             % v["date_end"].strftime("%Y-%m-%d")
@@ -1083,7 +1092,6 @@ class exporter(object):
                 "sequence",
             ],
         ):
-
             product_template = self.product_templates.get(i["product_tmpl_id"][0], None)
             if not product_template:
                 continue
@@ -1112,7 +1120,6 @@ class exporter(object):
                 subcontractors = [{}]
 
             for product_id in product_template["product_variant_ids"]:
-
                 # In the case of variants, the BOM needs to apply to the correct product
                 if i["product_id"] and not (i["product_id"][0] == product_id):
                     continue
@@ -1396,7 +1403,6 @@ class exporter(object):
                         steplist = mrp_routing_workcenters[i["id"]]
                         counter = 0
                         for step in steplist:
-
                             counter = counter + 1
                             suboperation = step["name"]
                             name = "%s - %s - %s" % (
