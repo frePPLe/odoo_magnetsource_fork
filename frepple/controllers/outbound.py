@@ -1586,9 +1586,9 @@ class exporter(object):
                 reserved_quantity = stock_moves_dict[stock_move_id][
                     "reserved_availability"
                 ]
-                
+
                 for i in stock_moves_dict[stock_move_id]["move_orig_ids"]:
-                    reserved_quantity += getReservedQuantity(i[0])
+                    reserved_quantity += getReservedQuantity(i)
             return reserved_quantity
 
         # Generate the demand records
@@ -1672,9 +1672,9 @@ class exporter(object):
                 cnt = 1
                 reserved_quantity = 0
                 for mv_id in i["move_ids"]:
-                    
+
                     reserved_quantity += getReservedQuantity(mv_id)
-               
+
 
                 yield (
                     '<demand name=%s batch=%s quantity="%s" due="%s" priority="%s" minshipment="%s" status="%s"><item name=%s/><customer name=%s/><location name=%s/>'
