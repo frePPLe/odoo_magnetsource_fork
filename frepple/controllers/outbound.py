@@ -1376,10 +1376,9 @@ class exporter(object):
                             if len(
                                 j["bom_product_template_attribute_value_ids"]
                             ) > 0 and not all(
-                                elem
-                                in product_buf["product_template_attribute_value_ids"]
-                                for elem in j[
-                                    "bom_product_template_attribute_value_ids"
+                                elem in j["bom_product_template_attribute_value_ids"]
+                                for elem in product_buf[
+                                    "product_template_attribute_value_ids"
                                 ]
                             ):
                                 continue
@@ -1672,9 +1671,7 @@ class exporter(object):
                 cnt = 1
                 reserved_quantity = 0
                 for mv_id in i["move_ids"]:
-
                     reserved_quantity += getReservedQuantity(mv_id)
-
 
                 yield (
                     '<demand name=%s batch=%s quantity="%s" due="%s" priority="%s" minshipment="%s" status="%s"><item name=%s/><customer name=%s/><location name=%s/>'
