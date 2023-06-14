@@ -1674,12 +1674,14 @@ class exporter(object):
                 reserved_quantity = 0
                 quantity_to_deliver = 0
                 for mv_id in i["move_ids"]:
+                    sm = stock_moves_dict.get(mv_id, None)
                     reserved_quantity += getReservedQuantity(mv_id)
-                    quantity_to_deliver += self.convert_qty_uom(
-                        mv_id["product_uom_qty"],
-                        mv_id["product_uom"],
-                        self.product_product[i["product_id"][0]]["template"],
-                    )
+                    if sm:
+                        quantity_to_deliver += self.convert_qty_uom(
+                            sm["product_uom_qty"],
+                            sm["product_uom"],
+                            self.product_product[i["product_id"][0]]["template"],
+                        )
 
                 if quantity_to_deliver <= 0:
                     status = "closed"
