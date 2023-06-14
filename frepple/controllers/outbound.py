@@ -1575,6 +1575,8 @@ class exporter(object):
                     "product_id",
                     "date",
                     "reserved_availability",
+                    "product_uom_qty",
+                    "product_uom",
                 ],
             ):
                 stock_moves_dict[sm["id"]] = sm
@@ -1670,8 +1672,22 @@ class exporter(object):
                 # Use the delivery order info for open orders
                 cnt = 1
                 reserved_quantity = 0
+                quantity_to_deliver = 0
                 for mv_id in i["move_ids"]:
                     reserved_quantity += getReservedQuantity(mv_id)
+                    quantity_to_deliver += self.convert_qty_uom(
+                        mv_id["product_uom_qty"],
+                        mv_id["product_uom"],
+                        self.product_product[i["product_id"][0]]["template"],
+                    )
+
+                if quantity_to_deliver <= 0:
+                    status = "closed"
+                    qty = self.convert_qty_uom(
+                        i["product_uom_qty"],
+                        i["product_uom"],
+                        self.product_product[i["product_id"][0]]["template"],
+                    )
 
                 yield (
                     '<demand name=%s batch=%s quantity="%s" due="%s" priority="%s" minshipment="%s" status="%s"><item name=%s/><customer name=%s/><location name=%s/>'
