@@ -1545,6 +1545,7 @@ class exporter(object):
                 "order_id",
                 "move_ids",
             ],
+            filter=[("order_id.state", "!=", "draft")],
         )
 
         # Get all sales orders
