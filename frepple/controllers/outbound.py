@@ -1535,7 +1535,7 @@ class exporter(object):
         # Get all sales order lines
         so_line = self.generator.getData(
             "sale.order.line",
-            search=[("product_id", "!=", False)],
+            search=[("product_id", "!=", False), ("order_id.state", "!=", "draft")],
             fields=[
                 "qty_delivered",
                 "state",
@@ -1545,7 +1545,6 @@ class exporter(object):
                 "order_id",
                 "move_ids",
             ],
-            filter=[("order_id.state", "!=", "draft")],
         )
 
         # Get all sales orders
