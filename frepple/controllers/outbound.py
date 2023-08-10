@@ -145,6 +145,8 @@ class exporter(object):
         timezone=None,
         singlecompany=False,
         version="0.0.0.unknown",
+        startdate=datetime.now() - timedelta(days=7),
+        enddate=datetime.now(),
     ):
         self.database = database
         self.company = company
@@ -168,6 +170,8 @@ class exporter(object):
                 self.timezone = i["tz"] or "UTC"
         self.timeformat = "%Y-%m-%dT%H:%M:%S"
         self.singlecompany = singlecompany
+        self.startdate = startdate
+        self.enddate = enddate
 
         # The mode argument defines different types of runs:
         #  - Mode 1:
@@ -1535,7 +1539,20 @@ class exporter(object):
         # Get all sales order lines
         so_line = self.generator.getData(
             "sale.order.line",
-            search=[("product_id", "!=", False), ("order_id.state", "!=", "draft")],
+            search=[
+                ("product_id", "!=", False),
+                ("order_id.state", "!=", "draft"),
+                (
+                    "write_date",
+                    ">=",
+                    self.startdate,
+                ),
+                (
+                    "write_date",
+                    "<=",
+                    self.enddate,
+                ),
+            ],
             fields=[
                 "qty_delivered",
                 "state",

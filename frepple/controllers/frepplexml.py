@@ -17,6 +17,7 @@
 #
 
 import base64
+from datetime import datetime, timedelta
 import logging
 import odoo
 import os
@@ -147,6 +148,16 @@ class XMLController(odoo.http.Controller):
                     singlecompany=kwargs.get("singlecompany", "false").lower()
                     == "true",
                     version=version,
+                    startdate=datetime.strptime(
+                        kwargs.get("startdate", False), "%Y-%m-%d %H:%M:%S"
+                    )
+                    if kwargs.get("startdate", False)
+                    else datetime.now() - timedelta(days=7),
+                    enddate=datetime.strptime(
+                        kwargs.get("enddate", False), "%Y-%m-%d %H:%M:%S"
+                    )
+                    if kwargs.get("enddate", False)
+                    else datetime.now(),
                 )
                 # last empty double quote is to let python understand frepple is a folder.
                 xml_folder = os.path.join(str(Path.home()), "logs", "frepple", "")
@@ -162,7 +173,6 @@ class XMLController(odoo.http.Controller):
                 with NamedTemporaryFile(
                     mode="w+t", delete=False, dir=xml_folder
                 ) as tmpfile:
-
                     for i in xp.run():
                         tmpfile.write(i)
                     filename = tmpfile.name
