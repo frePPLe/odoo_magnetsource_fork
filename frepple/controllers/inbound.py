@@ -70,6 +70,8 @@ class importer(object):
             stck_picking_type = self.env["stock.picking.type"].with_user(
                 self.actual_user
             )
+            stck_picking = self.env["stock.picking"].with_user(self.actual_user)
+            stck_move = self.env["stock.move"].with_user(self.actual_user)
         else:
             proc_order = self.env["purchase.order"]
             proc_orderline = self.env["purchase.order.line"]
@@ -77,6 +79,8 @@ class importer(object):
             mfg_workorder = self.env["mrp.workorder"]
             mfg_workcenter = self.env["mrp.workcenter"]
             stck_picking_type = self.env["stock.picking.type"]
+            stck_picking = self.env["stock.picking"]
+            stck_move = self.env["stock.move"]
         if self.mode == 1:
             # Cancel previous draft purchase quotations
             m = self.env["purchase.order"]
@@ -247,9 +251,86 @@ class importer(object):
                             )
                             po_line.product_qty = po_line.product_qty + float(quantity)
                         countproc += 1
-                    # TODO Create a distribution order
-                    # elif ordertype == "DO":
-                    #      create stock transfer
+                    elif ordertype == "DO":
+                        if not hasattr(self, "do_index"):
+                            self.do_index = 1
+                        else:
+                            self.do_index += 1
+                            product = self.env["product.product"].browse(int(item_id))
+                            quantity = elem.get("quantity")
+                            date_shipping = elem.get("start")
+                            origin = elem.get("origin")
+                            destination = elem.get("destination")
+                            if origin == "Ohio" and destination == "Castle Rock":
+                                picking_type_id = 47
+                                location_id = 21
+                                location_dest_id = 25
+                            elif origin == "Castle Rock" and destination == "Ohio":
+                                picking_type_id = 48
+                                location_id = 8
+                                location_dest_id = 12
+                            else:
+                                # ignore this DO
+                                logger.warning(
+                                    "Skipping DO creation as only Castle Rock and Ohio are accepted"
+                                )
+                                continue
+                            if date_shipping:
+                                date_shipping = datetime.strptime(
+                                    date_shipping, "%Y-%m-%d %H:%M:%S"
+                                )
+                            else:
+                                date_shipping = datetime.strptime(
+                                    datetime.now(), "%Y-%m-%d %H:%M:%S"
+                                )
+                            if not hasattr(self, "stock_picking_dict"):
+                                self.stock_picking_dict = {}
+                            if not self.stock_picking_dict.get((origin, destination)):
+                                self.stock_picking_dict[
+                                    (origin, destination)
+                                ] = stck_picking.create(
+                                    {
+                                        "picking_type_id": picking_type_id,
+                                        "scheduled_date": date_shipping,
+                                        "location_id": location_id,
+                                        "location_dest_id": location_dest_id,
+                                        "move_type": "direct",
+                                        "origin": "frePPLe",
+                                    }
+                                )
+                            sp = self.stock_picking_dict.get((origin, destination))
+                            if not hasattr(self, "sm_dict"):
+                                self.sm_dict = {}
+                            sm = self.sm_dict.get((product.id, sp.id))
+                            if sm:
+                                sm.write(
+                                    {
+                                        "date": min(date_shipping, sm.date),
+                                        "product_uom_qty": sm.product_uom_qty
+                                        + float(quantity),
+                                    }
+                                )
+                            else:
+                                sm = stck_move.create(
+                                    {
+                                        "date": date_shipping,
+                                        "product_id": product.id,
+                                        "product_uom_qty": quantity,
+                                        "product_uom": int(uom_id),
+                                        "location_id": sp.location_id.id,
+                                        "location_dest_id": sp.location_dest_id.id,
+                                        "picking_id": sp.id,
+                                        "origin": "frePPLe",
+                                        "name": "%s %s"
+                                        % (
+                                            self.stock_picking_dict.get(
+                                                (origin, destination)
+                                            ).name,
+                                            self.do_index,
+                                        ),
+                                    }
+                                )
+                                self.sm_dict[(product.id, sp.id)] = sm
                     elif ordertype == "WO":
                         # Update a workorder
                         if elem.get("owner") in mo_references:
@@ -363,7 +444,6 @@ class importer(object):
                                                 wc = mfg_workcenter.browse(res["id"])
                                                 if wo.workcenter_id == wc[0].owner:
                                                     wo.workcenter_id = res["id"]
-                                                
 
                         countmfg += 1
                 except Exception as e:
