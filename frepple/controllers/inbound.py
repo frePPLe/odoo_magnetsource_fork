@@ -253,84 +253,80 @@ class importer(object):
                         countproc += 1
                     elif ordertype == "DO":
                         if not hasattr(self, "do_index"):
-                            self.do_index = 1
+                            self.do_index = 0
+                        self.do_index += 1
+                        product = self.env["product.product"].browse(int(item_id))
+                        quantity = elem.get("quantity")
+                        date_shipping = elem.get("start")
+                        origin = elem.get("origin")
+                        destination = elem.get("destination")
+                        if origin == "Ohio" and destination == "Castle Rock":
+                            picking_type_id = 47
+                            location_id = 21
+                            location_dest_id = 25
+                        elif origin == "Castle Rock" and destination == "Ohio":
+                            picking_type_id = 48
+                            location_id = 8
+                            location_dest_id = 12
                         else:
-                            self.do_index += 1
-                            product = self.env["product.product"].browse(int(item_id))
-                            quantity = elem.get("quantity")
-                            date_shipping = elem.get("start")
-                            origin = elem.get("origin")
-                            destination = elem.get("destination")
-                            if origin == "Ohio" and destination == "Castle Rock":
-                                picking_type_id = 47
-                                location_id = 21
-                                location_dest_id = 25
-                            elif origin == "Castle Rock" and destination == "Ohio":
-                                picking_type_id = 48
-                                location_id = 8
-                                location_dest_id = 12
-                            else:
-                                # ignore this DO
-                                logger.warning(
-                                    "Skipping DO creation as only Castle Rock and Ohio are accepted"
-                                )
-                                continue
-                            if date_shipping:
-                                date_shipping = datetime.strptime(
-                                    date_shipping, "%Y-%m-%d %H:%M:%S"
-                                )
-                            else:
-                                date_shipping = datetime.strptime(
-                                    datetime.now(), "%Y-%m-%d %H:%M:%S"
-                                )
-                            if not hasattr(self, "stock_picking_dict"):
-                                self.stock_picking_dict = {}
-                            if not self.stock_picking_dict.get((origin, destination)):
-                                self.stock_picking_dict[
-                                    (origin, destination)
-                                ] = stck_picking.create(
-                                    {
-                                        "picking_type_id": picking_type_id,
-                                        "scheduled_date": date_shipping,
-                                        "location_id": location_id,
-                                        "location_dest_id": location_dest_id,
-                                        "move_type": "direct",
-                                        "origin": "frePPLe",
-                                    }
-                                )
-                            sp = self.stock_picking_dict.get((origin, destination))
-                            if not hasattr(self, "sm_dict"):
-                                self.sm_dict = {}
-                            sm = self.sm_dict.get((product.id, sp.id))
-                            if sm:
-                                sm.write(
-                                    {
-                                        "date": min(date_shipping, sm.date),
-                                        "product_uom_qty": sm.product_uom_qty
-                                        + float(quantity),
-                                    }
-                                )
-                            else:
-                                sm = stck_move.create(
-                                    {
-                                        "date": date_shipping,
-                                        "product_id": product.id,
-                                        "product_uom_qty": quantity,
-                                        "product_uom": int(uom_id),
-                                        "location_id": sp.location_id.id,
-                                        "location_dest_id": sp.location_dest_id.id,
-                                        "picking_id": sp.id,
-                                        "origin": "frePPLe",
-                                        "name": "%s %s"
-                                        % (
-                                            self.stock_picking_dict.get(
-                                                (origin, destination)
-                                            ).name,
-                                            self.do_index,
-                                        ),
-                                    }
-                                )
-                                self.sm_dict[(product.id, sp.id)] = sm
+                            # ignore this DO
+                            logger.warning(
+                                "Skipping DO creation as only Castle Rock and Ohio are accepted"
+                            )
+                            continue
+                        if date_shipping:
+                            date_shipping = datetime.strptime(
+                                date_shipping, "%Y-%m-%d %H:%M:%S"
+                            )
+                        else:
+                            date_shipping = datetime.now()
+                        if not hasattr(self, "stock_picking_dict"):
+                            self.stock_picking_dict = {}
+                        sp = self.stock_picking_dict.get((origin, destination))
+                        if sp is None:
+                            sp = stck_picking.create(
+                                {
+                                    "picking_type_id": picking_type_id,
+                                    "scheduled_date": date_shipping,
+                                    "location_id": location_id,
+                                    "location_dest_id": location_dest_id,
+                                    "move_type": "direct",
+                                    "origin": "frePPLe",
+                                }
+                            )
+                            self.stock_picking_dict[(origin, destination)] = sp
+                        if not hasattr(self, "sm_dict"):
+                            self.sm_dict = {}
+                        sm = self.sm_dict.get((product.id, sp.id))
+                        if sm:
+                            sm.write(
+                                {
+                                    "date": min(date_shipping, sm.date),
+                                    "product_uom_qty": sm.product_uom_qty
+                                    + float(quantity),
+                                }
+                            )
+                        else:
+                            sm = stck_move.create(
+                                {
+                                    "date": date_shipping,
+                                    "product_id": product.id,
+                                    "product_uom_qty": quantity,
+                                    "product_uom": int(uom_id),
+                                    "location_id": sp.location_id.id,
+                                    "location_dest_id": sp.location_dest_id.id,
+                                    "picking_id": sp.id,
+                                    "origin": "frePPLe",
+                                    "name": "%s %s"
+                                    % (
+                                        self.stock_picking_dict.get(
+                                            (origin, destination)
+                                        ).name,
+                                        self.do_index,
+                                    ),
+                                }
+                            )
+                            self.sm_dict[(product.id, sp.id)] = sm
                     elif ordertype == "WO":
                         # Update a workorder
                         if elem.get("owner") in mo_references:
