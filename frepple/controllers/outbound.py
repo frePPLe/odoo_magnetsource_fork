@@ -834,17 +834,23 @@ class exporter(object):
         ):
             self.product_templates[i["id"]] = i
 
-        self.mto_templates = set()
+        self.mto_templates = []
+        self.ship_from_templates = {}
         self.generator.env.cr.execute(
             """
             select product_id, name from stock_route_product
             inner join stock_location_route on stock_location_route.id = stock_route_product.route_id
-            where stock_location_route.name = 'Replenish on Order (MTO)';
+            where stock_location_route.name in
+            ('Replenish on Order (MTO)',
+            'Castle Rock: Supply Product From Ohio (Custom)',
+            'Ohio: Supply Product From Castle Rock (Custom)');
             """
         )
         for i in self.generator.env.cr.fetchall():
             if i[1] == "Replenish on Order (MTO)":
-                self.mto_templates.add(i[0])
+                self.mto_templates.append(i[0])
+            else:
+                self.ship_from_templates[i[0]] = i[1]
 
         # Read the products
         supplierinfo_fields = [
@@ -925,6 +931,11 @@ class exporter(object):
 
             if i["product_tmpl_id"][0] in self.mto_templates:
                 yield '<stringproperty name="inventory_policy" value="Make To Order"/>'
+            ship_from = self.ship_from_templates.get(i["product_tmpl_id"][0])
+            if ship_from:
+                yield '<stringproperty name="ship_from" value=%s/>' % quoteattr(
+                    ship_from
+                )
 
             # Export suppliers for the item, if the item is allowed to be purchased
             if tmpl["purchase_ok"]:
