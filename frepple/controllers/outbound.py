@@ -830,6 +830,7 @@ class exporter(object):
                 "categ_id",
                 "product_variant_ids",
                 "x_frepple_warehouse",
+                "x_studio_shipping_warehouse",
             ],
         ):
             self.product_templates[i["id"]] = i
@@ -838,19 +839,14 @@ class exporter(object):
         self.ship_from_templates = {}
         self.generator.env.cr.execute(
             """
-            select product_id, name from stock_route_product
+            select product_id from stock_route_product
             inner join stock_location_route on stock_location_route.id = stock_route_product.route_id
             where stock_location_route.name in
-            ('Replenish on Order (MTO)',
-            'Castle Rock: Supply Product From Ohio (Custom)',
-            'Ohio: Supply Product From Castle Rock (Custom)');
+            ('Replenish on Order (MTO)');
             """
         )
         for i in self.generator.env.cr.fetchall():
-            if i[1] == "Replenish on Order (MTO)":
-                self.mto_templates.append(i[0])
-            else:
-                self.ship_from_templates[i[0]] = i[1]
+            self.mto_templates.append(i[0])
 
         # Read the products
         supplierinfo_fields = [
@@ -910,8 +906,9 @@ class exporter(object):
             warehouse = None
             if warehouse_tmp and len(warehouse_tmp) > 0:
                 warehouse = ",".join([self.warehouses[w] for w in warehouse_tmp])
+            shipping_warehouse = tmpl["x_studio_shipping_warehouse"]
 
-            yield '<item name=%s uom=%s volume="%f" weight="%f" cost="%f" category=%s subcategory="%s,%s">\n%s' % (
+            yield '<item name=%s uom=%s volume="%f" weight="%f" cost="%f" category=%s subcategory="%s,%s">\n%s%s' % (
                 quoteattr(name),
                 quoteattr(tmpl["uom_id"][1]) if tmpl["uom_id"] else "",
                 i["volume"] or 0,
@@ -927,15 +924,16 @@ class exporter(object):
                 ('<stringproperty name="warehouse" value=%s/>\n' % quoteattr(warehouse))
                 if warehouse
                 else "",
+                (
+                    '\n<stringproperty name="ship_from" value=%s/>\n'
+                    % quoteattr(shipping_warehouse)
+                )
+                if shipping_warehouse
+                else "",
             )
 
             if i["product_tmpl_id"][0] in self.mto_templates:
                 yield '<stringproperty name="inventory_policy" value="Make To Order"/>'
-            ship_from = self.ship_from_templates.get(i["product_tmpl_id"][0])
-            if ship_from:
-                yield '<stringproperty name="ship_from" value=%s/>' % quoteattr(
-                    ship_from
-                )
 
             # Export suppliers for the item, if the item is allowed to be purchased
             if tmpl["purchase_ok"]:
