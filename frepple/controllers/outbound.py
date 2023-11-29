@@ -836,7 +836,6 @@ class exporter(object):
             self.product_templates[i["id"]] = i
 
         self.mto_templates = []
-        self.ship_from_templates = {}
         self.generator.env.cr.execute(
             """
             select product_id from stock_route_product
@@ -926,7 +925,7 @@ class exporter(object):
                 else "",
                 (
                     '\n<stringproperty name="ship_from" value=%s/>\n'
-                    % quoteattr(shipping_warehouse)
+                    % quoteattr(shipping_warehouse[1])
                 )
                 if shipping_warehouse
                 else "",
