@@ -230,6 +230,11 @@ class importer(object):
                                 price_unit = product_supplierinfo.price
                             else:
                                 price_unit = 0
+
+                            # SG - 01/03/2024: assign the correct product name based on description_purchase (English as the language)
+                            purchase_description = product.description_purchase or False
+                            product_name = f"{elem.get('item')}\n{purchase_description}" if purchase_description else elem.get("item")
+
                             po_line = proc_orderline.create(
                                 {
                                     "order_id": supplier_reference[supplier_id]["id"],
@@ -238,7 +243,7 @@ class importer(object):
                                     "product_uom": int(uom_id),
                                     "date_planned": date_planned,
                                     "price_unit": price_unit,
-                                    "name": elem.get("item"),
+                                    "name": product_name,
                                 }
                             )
                             product_supplier_dict[(item_id, supplier_id)] = po_line
