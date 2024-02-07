@@ -234,9 +234,27 @@ class importer(object):
                             else:
                                 price_unit = 0
 
-                            # SG - 01/03/2024: assign the correct product name based on description_purchase (English as the language)
-                            purchase_description = product.description_purchase or False
-                            product_name = f"{elem.get('item')}\n{purchase_description}" if purchase_description else elem.get("item")
+
+                            if product_supplierinfo and (
+                                product_supplierinfo.product_code
+                                or product_supplierinfo.product_name
+                            ):
+                                product_name = "%s%s" % (
+                                    (
+                                        ("[%s]" % (product_supplierinfo.product_code,))
+                                        if product_supplierinfo.product_code
+                                        else ""
+                                    ),
+                                    (
+                                        (" %s" % (product_supplierinfo.product_name,))
+                                        if product_supplierinfo.product_name
+                                        else ""
+                                    ),
+                                )
+                            else:
+                                # SG - 01/03/2024: assign the correct product name based on description_purchase (English as the language)
+                                purchase_description = product.description_purchase or False
+                                product_name = f"{elem.get('item')}\n{purchase_description}" if purchase_description else elem.get("item")
 
                             po_line = proc_orderline.create(
                                 {
