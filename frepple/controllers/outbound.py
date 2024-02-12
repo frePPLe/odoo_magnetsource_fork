@@ -336,7 +336,6 @@ class exporter(object):
         unit of measure of the uom dimension.
         """
         self.uom = {}
-        self.uom_categories = {}
         for i in self.generator.getData(
             "uom.uom",
             # We also need to load INactive UOMs, because there still might be records
@@ -344,8 +343,6 @@ class exporter(object):
             search=["|", ("active", "=", 1), ("active", "=", 0)],
             fields=["factor", "uom_type", "category_id", "name"],
         ):
-            if i["uom_type"] == "reference":
-                self.uom_categories[i["category_id"][0]] = i["id"]
             self.uom[i["id"]] = {
                 "factor": i["factor"],
                 "category": i["category_id"][0],
@@ -918,7 +915,7 @@ class exporter(object):
                 (max(0, tmpl["standard_price"]) or 0)  # Option 2: Map the "cost" to frepple
                 / self.convert_qty_uom(1.0, tmpl["uom_id"], i["product_tmpl_id"][0]),
                 quoteattr(tmpl["categ_id"][1]) if tmpl["categ_id"] else '""',
-                self.uom_categories[self.uom[tmpl["uom_id"][0]]["category"]],
+                tmpl["uom_id"][0],
                 i["id"],
                 ('<stringproperty name="warehouse" value=%s/>\n' % quoteattr(warehouse))
                 if warehouse
