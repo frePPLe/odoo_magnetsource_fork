@@ -1637,9 +1637,10 @@ class exporter(object):
                     ids=[j["partner_id"][0]],
                     fields=["commercial_partner_id"],
                 ):
-                    customer = self.map_customers.get(
-                        c["commercial_partner_id"][0], None
-                    )
+                    if c["commercial_partner_id"]:
+                        customer = self.map_customers.get(
+                            c["commercial_partner_id"][0], None
+                        )
                     if customer:
                         break
             if not customer or not location or not product:
