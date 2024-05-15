@@ -312,6 +312,14 @@ class importer(object):
                             picking_type_id = 48
                             location_id = 8
                             location_dest_id = 12
+                        elif origin == "Castle Rock" and destination == "Elbert":
+                            picking_type_id = 89
+                            location_id = 8
+                            location_dest_id = 12
+                        elif origin == "Elbert" and destination == "Castle Rock":
+                            picking_type_id = 87
+                            location_id = 11950
+                            location_dest_id = 11953
                         else:
                             # ignore this DO
                             logger.warning(
