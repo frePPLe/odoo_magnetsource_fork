@@ -924,7 +924,7 @@ class exporter(object):
                 warehouse = ",".join([self.warehouses[w] for w in warehouse_tmp])
             shipping_warehouse = tmpl["x_studio_shipping_warehouse"]
 
-            yield '<item name=%s uom=%s volume="%f" weight="%f" cost="%f" category=%s subcategory="%s,%s">\n%s%s%s' % (
+            yield '<item name=%s uom=%s volume="%f" weight="%f" cost="%f" category=%s subcategory="%s,%s">\n%s%s%s%s' % (
                 quoteattr(name),
                 quoteattr(tmpl["uom_id"][1]) if tmpl["uom_id"] else "",
                 i["volume"] or 0,
@@ -962,6 +962,10 @@ class exporter(object):
                     )
                     if tmpl["eighty_classification"]
                     else ""
+                ),
+                (
+                    '\n<stringproperty name="sale_ok" value="%s"/>\n'
+                    % ("true" if tmpl["sale_ok"] else "false",)
                 ),
             )
 
