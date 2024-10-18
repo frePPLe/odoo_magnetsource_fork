@@ -1918,7 +1918,25 @@ class exporter(object):
             for i in self.generator.getData(
                 "purchase.order",
                 ids=[j["order_id"][0] for j in po_line.values()],
-                fields=["name", "company_id", "partner_id", "state", "date_order"],
+                fields=[
+                    "name",
+                    "company_id",
+                    "partner_id",
+                    "state",
+                    "date_order",
+                    "picking_type_id",
+                ],
+            )
+        }
+
+        picking_type_warehouse = {
+            i["id"]: i["warehouse_id"][1]
+            for i in self.generator.getData(
+                "stock.picking.type",
+                fields=[
+                    "id",
+                    "warehouse_id",
+                ],
             )
         }
 
@@ -1938,7 +1956,11 @@ class exporter(object):
             # if PO status is done, we should ignore this PO line
             if j["state"] == "done" or not item:
                 continue
-            location = self.mfg_location
+            location = (
+                picking_type_warehouse.get(j["picking_type_id"][0])
+                if j["picking_type_id"]
+                else None
+            )
             if location and item and i["product_qty"] > i["qty_received"]:
                 start = self.formatDateTime(j["date_order"])
                 end = self.formatDateTime(i["date_planned"])
