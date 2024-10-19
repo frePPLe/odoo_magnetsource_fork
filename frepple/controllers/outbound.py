@@ -1933,6 +1933,7 @@ class exporter(object):
             i["id"]: i["warehouse_id"][1]
             for i in self.generator.getData(
                 "stock.picking.type",
+                search=[("warehouse_id", "!=", False)],
                 fields=[
                     "id",
                     "warehouse_id",
